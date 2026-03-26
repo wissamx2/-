@@ -18,7 +18,7 @@
         .flash-correct { animation: flashGreen 0.8s ease-out; }
         .flash-pass { animation: flashRed 0.8s ease-out; }
 
-        /* Touch Zones */
+        /* Touch Zones - for manual tapping */
         .touch-zone {
             position: absolute; top: 0; bottom: 0; width: 50%; z-index: 10;
             display: flex; align-items: center; justify-content: center;
@@ -28,7 +28,7 @@
         .zone-pass { left: 0; background-color: #ef4444; }
         .zone-correct { right: 0; background-color: #10b981; }
 
-        /* Portrait Warning */
+        /* Portrait Warning Overlay */
         @media screen and (orientation: portrait) {
             .game-active #portrait-warning { display: flex !important; }
             .game-active #game-ui-content { display: none !important; }
@@ -56,10 +56,6 @@
             <button onclick="prepareGame()" class="w-full bg-gradient-to-r from-green-400 to-emerald-600 hover:from-green-500 hover:to-emerald-700 text-white font-black text-2xl py-4 px-4 rounded-xl transition shadow-[0_0_20px_rgba(16,185,129,0.5)] transform hover:scale-105 active:scale-95">
                 ابدأ اللعب!
             </button>
-            
-            <button onclick="toggleModal('custom-words-modal')" class="w-full mt-4 bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-4 rounded-xl transition">
-                إضافة كلمات مخصصة
-            </button>
         </div>
     </div>
 
@@ -74,21 +70,21 @@
         <div id="portrait-warning" class="hidden absolute inset-0 bg-indigo-950 z-[100] flex flex-col items-center justify-center text-center p-6">
             <span class="text-8xl mb-6">🔄📱</span>
             <h2 class="text-4xl font-black mb-4 text-yellow-400">لف الجوال بالعرض!</h2>
-            <p class="text-2xl text-gray-300">اللعبة محتاجة شاشة عريضة عشان تشتغل صح.</p>
         </div>
 
         <div id="game-ui-content" class="h-full w-full flex flex-col items-center justify-center relative">
             <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-black/30 z-20 backdrop-blur-sm border-b border-white/10">
                 <div class="text-2xl font-bold text-gray-300">الوقت: <span id="timer-display" class="text-white">60</span></div>
-                <div class="text-sm font-bold text-gray-400 bg-black/50 px-3 py-1 rounded-full hidden sm:block">نزل لتحت = صح | ارفع لفوق = تخطي</div>
+                <div class="text-sm font-bold text-gray-400 bg-black/50 px-3 py-1 rounded-full hidden sm:block">نزل راسك = صح | ارفع راسك = تخطي</div>
                 <div onclick="endGameEarly()" class="text-xl font-bold text-red-400 bg-red-400/20 px-4 py-1 rounded-full cursor-pointer hover:bg-red-400/40">إنهاء</div>
             </div>
 
+            <!-- Touch fallbacks just in case -->
             <div class="touch-zone zone-pass" onclick="handleAnswer(false)">
-                <span class="transform -rotate-90 text-4xl font-black text-white/50">تخطي (يسار)</span>
+                <span class="transform -rotate-90 text-4xl font-black text-white/50">تخطي (نقر)</span>
             </div>
             <div class="touch-zone zone-correct" onclick="handleAnswer(true)">
-                <span class="transform -rotate-90 text-4xl font-black text-white/50">صح (يمين)</span>
+                <span class="transform -rotate-90 text-4xl font-black text-white/50">صح (نقر)</span>
             </div>
 
             <div class="z-20 text-center px-10 pointer-events-none w-full">
@@ -106,11 +102,11 @@
         
         <div class="w-full max-w-2xl grid grid-cols-2 gap-4 mb-8">
             <div class="bg-green-900/30 border border-green-500/30 rounded-xl p-4">
-                <h3 class="text-xl font-bold text-green-400 border-b border-green-500/30 pb-2 mb-3 text-center">إجابات صحيحة ✅</h3>
+                <h3 class="text-xl font-bold text-green-400 border-b border-green-500/30 pb-2 mb-3 text-center">صحيحة ✅</h3>
                 <ul id="list-correct" class="space-y-1 text-lg text-center"></ul>
             </div>
             <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-4">
-                <h3 class="text-xl font-bold text-red-400 border-b border-red-500/30 pb-2 mb-3 text-center">تم التخطي ❌</h3>
+                <h3 class="text-xl font-bold text-red-400 border-b border-red-500/30 pb-2 mb-3 text-center">تخطي ❌</h3>
                 <ul id="list-pass" class="space-y-1 text-lg text-center text-gray-400"></ul>
             </div>
         </div>
@@ -120,78 +116,53 @@
         </button>
     </div>
 
-    <!-- MODAL -->
-    <div id="custom-words-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 class="text-2xl font-bold mb-4 text-white">إضافة كلمات مخصصة</h3>
-            <p class="text-sm text-gray-400 mb-4">اكتب الكلمات مفصولة بفاصلة</p>
-            <textarea id="custom-words-input" rows="4" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 mb-4" placeholder="مثال: أحمد، بيتزا، السفر..."></textarea>
-            <div class="flex gap-3">
-                <button onclick="saveCustomWords()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-xl transition">حفظ</button>
-                <button onclick="toggleModal('custom-words-modal')" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-xl transition">إلغاء</button>
-            </div>
-        </div>
-    </div>
-
     <!-- JavaScript Logic -->
     <script>
-        // --- AUDIO SYNTHESIZER ---
+        // --- 1. AUDIO SYSTEM ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
 
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new AudioContext();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
         function playSound(type) {
             if (!audioCtx) return;
-            const oscillator = audioCtx.createOscillator();
+            const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-            oscillator.connect(gainNode);
+            osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-
             const now = audioCtx.currentTime;
 
             if (type === 'correct') {
-                // Happy high pitched beep
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(600, now);
-                oscillator.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
                 gainNode.gain.setValueAtTime(0.5, now);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                oscillator.start(now);
-                oscillator.stop(now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
             } else if (type === 'pass') {
-                // Sad low pitched buzz
-                oscillator.type = 'sawtooth';
-                oscillator.frequency.setValueAtTime(300, now);
-                oscillator.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
                 gainNode.gain.setValueAtTime(0.3, now);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                oscillator.start(now);
-                oscillator.stop(now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
             } else if (type === 'end') {
-                // Long alarm beep
-                oscillator.type = 'square';
-                oscillator.frequency.setValueAtTime(400, now);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, now);
                 gainNode.gain.setValueAtTime(0.3, now);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, now + 1);
-                oscillator.start(now);
-                oscillator.stop(now + 1);
+                osc.start(now); osc.stop(now + 1);
             }
         }
 
-        // --- GAME DATA & LOGIC ---
+        // --- 2. GAME DATA ---
         const dictionary = {
-            "الجيم": ["دمبل", "سكوات", "بنش برس", "ديدليفت", "كارديو", "تريدميل", "بروتين", "كرياتين", "شوفان", "عضلة الباي", "عضلة التراي", "عضلة الصدر", "عضلة الظهر", "يوم الرجلين", "مدرب", "اشتراك الجيم", "حديد", "بار", "عقلة", "تمرين ضغط", "مكملات", "دايت", "تنشيف", "تضخيم", "ستيرويد"],
-            "مكس عام": ["شاورما", "فلافل", "ببجي", "بلايستيشن", "نتفليكس", "تيك توك", "يوتيوب", "سيارة", "طيارة", "جواز سفر", "بيتزا", "قهوة", "شاي", "برجر", "عرس", "مدرسة", "جامعة", "امتحان", "مدير", "راتب", "سفر", "مستشفى", "طبيب", "شرطة", "سجن", "بحر", "مسبح", "تلفزيون", "موبايل", "شاحن", "سماعات", "كيبورد", "ماوس", "لابتوب", "واتساب", "انستغرام", "سناب شات", "تويتر", "فيسبوك"],
-            "أفعال وأشياء للتمثيل": ["يسبح", "يطبخ", "ينام", "يلعب بلايستيشن", "يسوق سيارة", "يغني", "يرقص", "يبكي", "يضحك", "يأكل شاورما", "يشرب قهوة", "يقرأ كتاب", "يكتب", "يركض", "يقفز", "يصور سيلفي", "يتصل بالتليفون", "يغسل صحون", "يكوي ملابس", "يصطاد سمك", "يلعب كرة قدم", "يلعب سلة", "يتخانق", "يسرق", "يخاف", "يبرد", "يعرق", "يصلح سيارة", "يفرشي أسنانه", "يستحم"],
-            "كلمات مخصصة": [] 
+            "الجيم": ["دمبل", "سكوات", "بنش برس", "ديدليفت", "كارديو", "تريدميل", "بروتين", "كرياتين", "شوفان", "عضلة الباي", "عضلة التراي", "عضلة الصدر", "يوم الرجلين", "مدرب"],
+            "مكس عام": ["شاورما", "فلافل", "ببجي", "بلايستيشن", "نتفليكس", "تيك توك", "يوتيوب", "سيارة", "طيارة", "جواز سفر", "بيتزا", "قهوة", "شاي", "برجر"],
+            "أفعال للتمثيل": ["يسبح", "يطبخ", "ينام", "يلعب بلايستيشن", "يسوق سيارة", "يغني", "يرقص", "يبكي", "يضحك", "يأكل شاورما", "يشرب قهوة", "يقرأ كتاب"]
         };
 
         let currentDeck = [], score = 0, correctList = [], passList = [], timeLeft = 60, timerInterval = null, isPlaying = false, tiltCooldown = false, wakeLock = null;
@@ -211,83 +182,78 @@
             iosBtn: document.getElementById('ios-permission-btn')
         };
 
-        function init() { renderCategories(); checkIOS(); }
+        function init() { renderCategories(); checkSensors(); }
 
         function renderCategories() {
             DOM.categories.innerHTML = '';
             Object.keys(dictionary).forEach((cat, index) => {
-                if(cat === "كلمات مخصصة" && dictionary[cat].length === 0) return;
                 const isChecked = index === 0 ? 'checked' : '';
-                const html = `<label class="flex items-center space-x-3 space-x-reverse cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition text-gray-800"><input type="radio" name="category" value="${cat}" class="form-radio h-5 w-5 text-indigo-600" ${isChecked}><span class="text-lg font-bold">${cat} <span class="text-sm font-normal text-gray-500">(${dictionary[cat].length} كلمة)</span></span></label>`;
+                const html = `<label class="flex items-center space-x-3 space-x-reverse cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition text-gray-800"><input type="radio" name="category" value="${cat}" class="form-radio h-5 w-5 text-indigo-600" ${isChecked}><span class="text-lg font-bold">${cat} <span class="text-sm font-normal text-gray-500">(${dictionary[cat].length})</span></span></label>`;
                 DOM.categories.insertAdjacentHTML('beforeend', html);
             });
         }
 
-        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-
-        function saveCustomWords() {
-            const input = document.getElementById('custom-words-input').value;
-            if(!input.trim()) return toggleModal('custom-words-modal');
-            const words = input.split(/[،,]/).map(w => w.trim()).filter(w => w);
-            if(words.length > 0) { dictionary["كلمات مخصصة"] = words; renderCategories(); }
-            toggleModal('custom-words-modal');
-        }
-
-        function checkIOS() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // --- 3. SENSORS (GRAVITY BASED) ---
+        function checkSensors() {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                 DOM.iosBtn.classList.remove('hidden');
-                DOM.iosBtn.onclick = requestOrientationPermission;
-            } else { window.addEventListener('deviceorientation', handleOrientation); }
-        }
-
-        async function requestOrientationPermission() {
-            try {
-                const permissionState = await DeviceOrientationEvent.requestPermission();
-                if (permissionState === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                    DOM.iosBtn.classList.add('hidden');
-                }
-            } catch (error) { console.error(error); }
-        }
-
-        function shuffle(array) {
-            let currentIndex = array.length, randomIndex;
-            while (currentIndex > 0) {
-                randomIndex = Math.floor(Math.random() * currentIndex);
-                currentIndex--;
-                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+                DOM.iosBtn.onclick = async () => {
+                    try {
+                        const perm = await DeviceMotionEvent.requestPermission();
+                        if (perm === 'granted') {
+                            window.addEventListener('devicemotion', handleGravityMotion);
+                            DOM.iosBtn.classList.add('hidden');
+                        }
+                    } catch (e) { console.error(e); }
+                };
+            } else {
+                window.addEventListener('devicemotion', handleGravityMotion);
             }
-            return array;
         }
+
+        function handleGravityMotion(event) {
+            if (!isPlaying || tiltCooldown) return;
+
+            // Using gravity on the Z-axis (out of the screen)
+            // Flat vertical: z is ~ 0
+            // Screen facing floor: z approaches -9.8
+            // Screen facing ceiling: z approaches +9.8
+            const z = event.accelerationIncludingGravity?.z;
+            if (z === null || z === undefined) return;
+
+            if (z < -5.5) {
+                // Tilted Down (Floor) -> Correct
+                handleAnswer(true);
+            } else if (z > 5.5) {
+                // Tilted Up (Ceiling) -> Pass
+                handleAnswer(false);
+            }
+        }
+
+        // --- 4. GAME FLOW ---
+        function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
 
         async function requestWakeLock() {
-            if ('wakeLock' in navigator) {
-                try { wakeLock = await navigator.wakeLock.request('screen'); } 
-                catch (err) { console.log(`Wake Lock error: ${err.name}, ${err.message}`); }
-            }
+            if ('wakeLock' in navigator) try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
         }
-
-        function releaseWakeLock() { if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); } }
+        function releaseWakeLock() { if (wakeLock) { wakeLock.release(); wakeLock = null; } }
 
         function forceLandscape() {
             try {
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().then(() => {
-                        if (screen.orientation && screen.orientation.lock) {
-                            screen.orientation.lock('landscape').catch(e => console.log("Orientation lock not supported"));
-                        }
-                    }).catch(e => console.log("Fullscreen not supported"));
+                        if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(e=>{});
+                    }).catch(e=>{});
                 }
             } catch (err) {}
         }
 
         function prepareGame() {
-            initAudio(); // Initialize audio context on user interaction
+            initAudio(); // Must initialize audio on click
             
             const selectedCat = document.querySelector('input[name="category"]:checked').value;
             currentDeck = shuffle([...dictionary[selectedCat]]);
-            if (currentDeck.length === 0) return alert("لا يوجد كلمات في هذا التصنيف!");
-
+            
             score = 0; correctList = []; passList = []; timeLeft = 60;
             
             DOM.home.classList.add('hidden');
@@ -303,12 +269,10 @@
                 count--;
                 if(count > 0) { 
                     DOM.countdownNum.innerText = count; 
-                    playSound('correct'); // Optional: small tick sound for countdown
-                } 
-                else if (count === 0) { 
+                    playSound('correct'); // Ticking sound
+                } else if (count === 0) { 
                     DOM.countdownNum.innerText = "انطلق!"; 
-                } 
-                else {
+                } else {
                     clearInterval(countInterval);
                     DOM.countdown.classList.add('hidden');
                     startGame();
@@ -337,7 +301,10 @@
 
         function handleAnswer(isCorrect) {
             if (!isPlaying || tiltCooldown) return;
-            tiltCooldown = true; setTimeout(() => { tiltCooldown = false; }, 1500);
+            
+            // Cooldown prevents double-triggering
+            tiltCooldown = true; 
+            setTimeout(() => { tiltCooldown = false; }, 1200);
 
             const currentWordText = DOM.word.innerText;
             DOM.game.classList.remove('flash-correct', 'flash-pass');
@@ -353,32 +320,6 @@
                 DOM.game.classList.add('flash-pass');
             }
             showNextWord();
-        }
-
-        function handleOrientation(event) {
-            if (!isPlaying || tiltCooldown) return;
-
-            const orientation = (screen.orientation || {}).angle || window.orientation || 0;
-            let tiltAngle = 0;
-
-            // Simplify logic: use gamma for landscape, beta for portrait fallback
-            if (Math.abs(orientation) === 90) {
-                tiltAngle = event.gamma; 
-                if (orientation === -90) tiltAngle = -tiltAngle; 
-            } else {
-                tiltAngle = event.beta - 90; // normalize so 0 is upright
-            }
-
-            // Wider Deadzone: Needs to tilt more than 40 degrees
-            const TILT_THRESHOLD = 40;
-
-            if (tiltAngle < -TILT_THRESHOLD) {
-                // Tilted Down -> Correct
-                handleAnswer(true);
-            } else if (tiltAngle > TILT_THRESHOLD) {
-                // Tilted Up -> Pass
-                handleAnswer(false);
-            }
         }
 
         function endGameEarly() { if(confirm('متأكد بدك تنهي اللعبة؟')) endGame(); }
