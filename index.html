@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>معاتيه للغاية</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; touch-action: pan-y; overflow: hidden; }
+        /* Prevent text selection during gameplay */
+        .no-select { user-select: none; -webkit-user-select: none; }
+        
+        /* Flash animations for correct/pass */
+        @keyframes flashGreen {
+            0% { background-color: #10b981; }
+            100% { background-color: transparent; }
+        }
+        @keyframes flashRed {
+            0% { background-color: #ef4444; }
+            100% { background-color: transparent; }
+        }
+        .flash-correct { animation: flashGreen 0.8s ease-out; }
+        .flash-pass { animation: flashRed 0.8s ease-out; }
+
+        /* Touch Zones for landscape gameplay */
+        .touch-zone {
+            position: absolute; top: 0; bottom: 0; width: 50%; z-index: 10;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0.1; transition: opacity 0.3s;
+        }
+        .touch-zone:active { opacity: 0.3; }
+        .zone-pass { left: 0; background-color: #ef4444; }
+        .zone-correct { right: 0; background-color: #10b981; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-900 via-purple-900 to-gray-900 text-white h-screen w-screen no-select">
+
+    <!-- 1. HOME SCREEN -->
+    <div id="home-screen" class="flex flex-col items-center justify-center h-full w-full p-6 transition-all duration-300">
+        <h1 class="text-6xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-500 drop-shadow-lg text-center">معاتيه للغاية</h1>
+        <p class="text-gray-300 mb-8 text-center text-lg">حط الجوال على جبينك وخلي الشباب يمثلولك!</p>
+        
+        <div class="w-full max-w-md bg-white/10 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-white/20">
+            <h2 class="text-xl font-bold mb-4 border-b border-white/20 pb-2">اختر التصنيف:</h2>
+            <div id="categories-container" class="space-y-3 mb-6">
+                <!-- Categories injected via JS -->
+            </div>
+
+            <!-- iOS Permission Button (Hidden by default, shown if iOS) -->
+            <button id="ios-permission-btn" class="hidden w-full mb-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg">
+                السماح باستخدام حساس الحركة (للايفون)
+            </button>
+
+            <button onclick="prepareGame()" class="w-full bg-gradient-to-r from-green-400 to-emerald-600 hover:from-green-500 hover:to-emerald-700 text-white font-black text-2xl py-4 px-4 rounded-xl transition shadow-[0_0_20px_rgba(16,185,129,0.5)] transform hover:scale-105 active:scale-95">
+                ابدأ اللعب!
+            </button>
+            
+            <button onclick="toggleModal('custom-words-modal')" class="w-full mt-4 bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-4 rounded-xl transition">
+                إضافة كلمات مخصصة
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. COUNTDOWN SCREEN -->
+    <div id="countdown-screen" class="hidden fixed inset-0 flex items-center justify-center h-full w-full bg-indigo-900 z-50">
+        <div id="countdown-number" class="text-[15rem] font-black text-white drop-shadow-2xl">3</div>
+    </div>
+
+    <!-- 3. GAMEPLAY SCREEN -->
+    <div id="game-screen" class="hidden fixed inset-0 flex flex-col items-center justify-center h-full w-full bg-gray-900 z-40 transition-colors duration-200">
+        <!-- Header / Timer -->
+        <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-black/30 z-20 backdrop-blur-sm border-b border-white/10">
+            <div class="text-2xl font-bold text-gray-300">الوقت: <span id="timer-display" class="text-white">60</span></div>
+            <div class="text-sm font-bold text-gray-400 bg-black/50 px-3 py-1 rounded-full">نزل لتحت = صح | ارفع لفوق = تخطي</div>
+            <div onclick="endGameEarly()" class="text-xl font-bold text-red-400 bg-red-400/20 px-4 py-1 rounded-full cursor-pointer hover:bg-red-400/40">إنهاء</div>
+        </div>
+
+        <!-- Touch Fallback Zones -->
+        <div class="touch-zone zone-pass" onclick="handleAnswer(false)">
+            <span class="transform -rotate-90 text-4xl font-black text-white/50">تخطي (يسار)</span>
+        </div>
+        <div class="touch-zone zone-correct" onclick="handleAnswer(true)">
+            <span class="transform -rotate-90 text-4xl font-black text-white/50">صح (يمين)</span>
+        </div>
+
+        <!-- The Word -->
+        <div class="z-20 text-center px-10 pointer-events-none">
+            <h1 id="current-word" class="text-[6rem] leading-none font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] text-center break-words">
+                الكلمة
+            </h1>
+        </div>
+    </div>
+
+    <!-- 4. RESULTS SCREEN -->
+    <div id="results-screen" class="hidden fixed inset-0 flex flex-col items-center justify-start h-full w-full bg-gradient-to-br from-gray-900 to-indigo-900 z-50 p-6 overflow-y-auto">
+        <h2 class="text-5xl font-black mb-2 mt-8 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">انتهى الوقت!</h2>
+        <div class="text-3xl font-bold mb-8 text-white">النتيجة: <span id="final-score" class="text-green-400 text-5xl">0</span></div>
+        
+        <div class="w-full max-w-2xl grid grid-cols-2 gap-4 mb-8">
+            <!-- Correct Words -->
+            <div class="bg-green-900/30 border border-green-500/30 rounded-xl p-4">
+                <h3 class="text-xl font-bold text-green-400 border-b border-green-500/30 pb-2 mb-3 text-center">إجابات صحيحة ✅</h3>
+                <ul id="list-correct" class="space-y-1 text-lg text-center"></ul>
+            </div>
+            <!-- Passed Words -->
+            <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-4">
+                <h3 class="text-xl font-bold text-red-400 border-b border-red-500/30 pb-2 mb-3 text-center">تم التخطي ❌</h3>
+                <ul id="list-pass" class="space-y-1 text-lg text-center text-gray-400"></ul>
+            </div>
+        </div>
+
+        <button onclick="resetToHome()" class="w-full max-w-md bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-2xl py-4 rounded-xl shadow-lg transition mb-8">
+            العب مرة تانية
+        </button>
+    </div>
+
+    <!-- MODAL: Custom Words -->
+    <div id="custom-words-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 border border-gray-600 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 class="text-2xl font-bold mb-4 text-white">إضافة كلمات مخصصة</h3>
+            <p class="text-sm text-gray-400 mb-4">اكتب الكلمات مفصولة بفاصلة (، أو ,)</p>
+            <textarea id="custom-words-input" rows="4" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 mb-4" placeholder="مثال: أحمد، بيتزا، السفر..."></textarea>
+            <div class="flex gap-3">
+                <button onclick="saveCustomWords()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-xl transition">حفظ</button>
+                <button onclick="toggleModal('custom-words-modal')" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-xl transition">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. DATA: Arabic Words Dictionary ---
+        const dictionary = {
+            "الجيم": [
+                "دمبل", "سكوات", "بنش برس", "ديدليفت", "كارديو", "تريدميل", "بروتين", "كرياتين", "شوفان", 
+                "عضلة الباي", "عضلة التراي", "عضلة الصدر", "عضلة الظهر", "يوم الرجلين", "مدرب", "اشتراك الجيم", 
+                "حديد", "بار", "عقلة", "تمرين ضغط", "مكملات", "دايت", "تنشيف", "تضخيم", "ستيرويد"
+            ],
+            "مكس عام": [
+                "شاورما", "فلافل", "ببجي", "بلايستيشن", "نتفليكس", "تيك توك", "يوتيوب", "سيارة", "طيارة", 
+                "جواز سفر", "بيتزا", "قهوة", "شاي", "برجر", "عرس", "مدرسة", "جامعة", "امتحان", "مدير", 
+                "راتب", "سفر", "مستشفى", "طبيب", "شرطة", "سجن", "بحر", "مسبح", "تلفزيون", "موبايل", "شاحن",
+                "سماعات", "كيبورد", "ماوس", "لابتوب", "واتساب", "انستغرام", "سناب شات", "تويتر", "فيسبوك"
+            ],
+            "أفعال وأشياء للتمثيل": [
+                "يسبح", "يطبخ", "ينام", "يلعب بلايستيشن", "يسوق سيارة", "يغني", "يرقص", "يبكي", "يضحك", 
+                "يأكل شاورما", "يشرب قهوة", "يقرأ كتاب", "يكتب", "يركض", "يقفز", "يصور سيلفي", "يتصل بالتليفون", 
+                "يغسل صحون", "يكوي ملابس", "يصطاد سمك", "يلعب كرة قدم", "يلعب سلة", "يتخانق", "يسرق", "يخاف",
+                "يبرد", "يعرق", "يصلح سيارة", "يفرشي أسنانه", "يستحم"
+            ],
+            "كلمات مخصصة": [] // Populated by user
+        };
+
+        // --- 2. STATE VARIABLES ---
+        let currentDeck = [];
+        let score = 0;
+        let correctList = [];
+        let passList = [];
+        let timeLeft = 60;
+        let timerInterval = null;
+        let isPlaying = false;
+        let tiltCooldown = false;
+        let wakeLock = null;
+
+        // --- 3. INITIALIZATION ---
+        const DOM = {
+            categories: document.getElementById('categories-container'),
+            home: document.getElementById('home-screen'),
+            countdown: document.getElementById('countdown-screen'),
+            countdownNum: document.getElementById('countdown-number'),
+            game: document.getElementById('game-screen'),
+            word: document.getElementById('current-word'),
+            timer: document.getElementById('timer-display'),
+            results: document.getElementById('results-screen'),
+            finalScore: document.getElementById('final-score'),
+            listCorrect: document.getElementById('list-correct'),
+            listPass: document.getElementById('list-pass'),
+            iosBtn: document.getElementById('ios-permission-btn')
+        };
+
+        function init() {
+            renderCategories();
+            checkIOS();
+        }
+
+        function renderCategories() {
+            DOM.categories.innerHTML = '';
+            Object.keys(dictionary).forEach((cat, index) => {
+                if(cat === "كلمات مخصصة" && dictionary[cat].length === 0) return;
+                
+                const isChecked = index === 0 ? 'checked' : '';
+                const html = `
+                    <label class="flex items-center space-x-3 space-x-reverse cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition text-gray-800">
+                        <input type="radio" name="category" value="${cat}" class="form-radio h-5 w-5 text-indigo-600" ${isChecked}>
+                        <span class="text-lg font-bold">${cat} <span class="text-sm font-normal text-gray-500">(${dictionary[cat].length} كلمة)</span></span>
+                    </label>
+                `;
+                DOM.categories.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- 4. MODAL & CUSTOM WORDS ---
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        function saveCustomWords() {
+            const input = document.getElementById('custom-words-input').value;
+            if(!input.trim()) return toggleModal('custom-words-modal');
+            
+            // Split by Arabic or English comma, clean whitespace, remove empty
+            const words = input.split(/[،,]/).map(w => w.trim()).filter(w => w);
+            if(words.length > 0) {
+                dictionary["كلمات مخصصة"] = words;
+                renderCategories();
+            }
+            toggleModal('custom-words-modal');
+        }
+
+        // --- 5. IOS PERMISSIONS ---
+        function checkIOS() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DOM.iosBtn.classList.remove('hidden');
+                DOM.iosBtn.onclick = requestOrientationPermission;
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        }
+
+        async function requestOrientationPermission() {
+            try {
+                const permissionState = await DeviceOrientationEvent.requestPermission();
+                if (permissionState === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    DOM.iosBtn.classList.add('hidden');
+                    alert("تم تفعيل حساس الحركة بنجاح!");
+                } else {
+                    alert("يجب إعطاء الصلاحية لاستخدام حساس الحركة، أو يمكنك استخدام اللمس للعب.");
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        // --- 6. GAME LOGIC ---
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex > 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.log(`Wake Lock error: ${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => { wakeLock = null; });
+            }
+        }
+
+        function prepareGame() {
+            const selectedCat = document.querySelector('input[name="category"]:checked').value;
+            currentDeck = shuffle([...dictionary[selectedCat]]);
+            
+            if (currentDeck.length === 0) return alert("لا يوجد كلمات في هذا التصنيف!");
+
+            score = 0;
+            correctList = [];
+            passList = [];
+            timeLeft = 60;
+            
+            DOM.home.classList.add('hidden');
+            DOM.countdown.classList.remove('hidden');
+            
+            requestWakeLock();
+            
+            // 3..2..1 Countdown
+            let count = 3;
+            DOM.countdownNum.innerText = count;
+            const countInterval = setInterval(() => {
+                count--;
+                if(count > 0) {
+                    DOM.countdownNum.innerText = count;
+                } else if (count === 0) {
+                    DOM.countdownNum.innerText = "انطلق!";
+                } else {
+                    clearInterval(countInterval);
+                    DOM.countdown.classList.add('hidden');
+                    startGame();
+                }
+            }, 1000);
+        }
+
+        function startGame() {
+            DOM.game.classList.remove('hidden');
+            isPlaying = true;
+            DOM.timer.innerText = timeLeft;
+            showNextWord();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                DOM.timer.innerText = timeLeft;
+                if(timeLeft <= 10) DOM.timer.classList.add('text-red-500'); // Warning color
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function showNextWord() {
+            if (currentDeck.length === 0) {
+                endGame(); // Out of words
+                return;
+            }
+            DOM.word.innerText = currentDeck.pop();
+        }
+
+        function handleAnswer(isCorrect) {
+            if (!isPlaying || tiltCooldown) return;
+
+            // 1.5s Strict Debounce to prevent multiple fires
+            tiltCooldown = true;
+            setTimeout(() => { tiltCooldown = false; }, 1500);
+
+            const currentWordText = DOM.word.innerText;
+
+            // Visual Feedback
+            DOM.game.classList.remove('flash-correct', 'flash-pass');
+            // trigger reflow
+            void DOM.game.offsetWidth;
+
+            if (isCorrect) {
+                score++;
+                correctList.push(currentWordText);
+                DOM.game.classList.add('flash-correct');
+            } else {
+                passList.push(currentWordText);
+                DOM.game.classList.add('flash-pass');
+            }
+
+            showNextWord();
+        }
+
+        // --- 7. TILT SENSOR LOGIC ---
+        function handleOrientation(event) {
+            if (!isPlaying || tiltCooldown) return;
+
+            let pitch;
+            // Detect if screen is in landscape (90 or -90 degrees)
+            const orientation = (screen.orientation || {}).angle || window.orientation || 0;
+            
+            if (Math.abs(orientation) === 90) {
+                // In landscape, 'gamma' represents the tilt forward/backward relative to the screen plane.
+                pitch = event.gamma; 
+                if (orientation === -90) pitch = -pitch; // Flip logic if rotated the other way
+            } else {
+                // In portrait (fallback), 'beta' represents the tilt.
+                pitch = event.beta;
+            }
+
+            // Thresholds for triggering an action
+            // Device flat against forehead = pitch near 90 or -90.
+            // Tilted downwards (towards floor) -> pitch approaches 0.
+            // Tilted upwards (towards sky) -> pitch goes opposite or higher.
+            
+            // To make it reliable across devices without complex matrix math:
+            // We use standard Head's Up angles. 
+            if (pitch > 45 && pitch < 135) {
+                // Neutral (Holding flat on forehead)
+            } else if (pitch <= 40 && pitch > -20) {
+                // Tilted Down (Correct)
+                handleAnswer(true);
+            } else if (pitch >= 140 || pitch < -40) {
+                // Tilted Up (Pass)
+                handleAnswer(false);
+            }
+        }
+
+        // --- 8. END GAME LOGIC ---
+        function endGameEarly() {
+            if(confirm('متأكد بدك تنهي اللعبة؟')) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            releaseWakeLock();
+            
+            DOM.game.classList.add('hidden');
+            DOM.timer.classList.remove('text-red-500');
+            
+            // Populate Results
+            DOM.finalScore.innerText = score;
+            DOM.listCorrect.innerHTML = correctList.map(w => `<li>${w}</li>`).join('') || '<li>لا يوجد</li>';
+            DOM.listPass.innerHTML = passList.map(w => `<li>${w}</li>`).join('') || '<li>لا يوجد</li>';
+            
+            DOM.results.classList.remove('hidden');
+        }
+
+        function resetToHome() {
+            DOM.results.classList.add('hidden');
+            DOM.home.classList.remove('hidden');
+            renderCategories(); // Re-render to show correct word counts
+        }
+
+        // Run Init
+        init();
+    </script>
+</body>
+</html>
